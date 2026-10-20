@@ -1,6 +1,6 @@
-import type { Announcement, AppNotification, AttendanceAudit, AttendancePage, AttendanceRecord, AttendanceSummary, AuthResponse, Department, Employee, EmployeeDocument, EmployeePage, LeaveBalance, LeaveRequest, LeaveStatus, LeaveType, PayrollCorrection, PayrollPage, PayrollPayslip, PayrollRun, PayrollStructure, PerformanceGoal, PerformanceReview, ReviewCycle, Role } from "./types";
+import type { Announcement, AppNotification, AttendanceAudit, AttendancePage, AttendanceRecord, AttendanceSummary, AuthResponse, Department, Employee, EmployeeDocument, EmployeePage, LeaveBalance, LeaveRequest, LeaveStatus, LeaveType, ManagerOption, PayrollCorrection, PayrollPage, PayrollPayslip, PayrollRun, PayrollStructure, PerformanceGoal, PerformanceReview, Project, ReviewCycle, Role } from "./types";
 
-const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:8090" : window.location.origin);
+const API = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:8090" : window.location.origin)).replace(/\/+$/, "");
 let accessToken: string | null = null;
 let refreshInFlight: Promise<AuthResponse> | null = null;
 
@@ -116,6 +116,7 @@ export const authApi = {
 
 export const peopleApi = {
   departments: () => request<Department[]>("/api/departments"),
+  managers: () => request<ManagerOption[]>("/api/employees/managers"),
   employees: (params: URLSearchParams) => request<EmployeePage>(`/api/employees?${params}`),
   me: () => request<Employee>("/api/employees/me"),
   createEmployee: (employee: Omit<Employee, "id" | "departmentName" | "managerName">) =>
@@ -123,13 +124,23 @@ export const peopleApi = {
   updateEmployee: (id: string, employee: Omit<Employee, "id" | "departmentName" | "managerName">) =>
     request<Employee>(`/api/employees/${id}`, { method: "PUT", body: JSON.stringify(employee) }),
   deleteEmployee: (id: string) => request<void>(`/api/employees/${id}`, { method: "DELETE" }),
-  createDepartment: (department: { code: string; name: string; description: string }) =>
+  createDepartment: (department: { code: string; name: string; description: string; managerId: string | null }) =>
     request<Department>("/api/departments", { method: "POST", body: JSON.stringify(department) }),
+  updateDepartment: (id: string, department: { code: string; name: string; description: string | null; active: boolean; managerId: string | null }) =>
+    request<Department>(`/api/departments/${id}`, { method: "PUT", body: JSON.stringify(department) }),
   documents: (id: string) => request<EmployeeDocument[]>(`/api/employees/${id}/documents`),
   addDocument: (id: string, document: Omit<EmployeeDocument, "id" | "uploadedAt">) =>
     request<EmployeeDocument>(`/api/employees/${id}/documents`, { method: "POST", body: JSON.stringify(document) }),
   deleteDocument: (employeeId: string, documentId: string) =>
     request<void>(`/api/employees/${employeeId}/documents/${documentId}`, { method: "DELETE" }),
+};
+
+export const projectApi = {
+  list: () => request<Project[]>("/api/projects"),
+  create: (project: { code: string; name: string; description: string; departmentId: string; managerId: string | null }) =>
+    request<Project>("/api/projects", { method: "POST", body: JSON.stringify(project) }),
+  update: (id: string, project: { code: string; name: string; description: string | null; departmentId: string; managerId: string | null; active: boolean }) =>
+    request<Project>(`/api/projects/${id}`, { method: "PUT", body: JSON.stringify(project) }),
 };
 
 export const attendanceApi = {

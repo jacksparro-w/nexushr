@@ -88,7 +88,7 @@ public class AuthController {
         ResponseCookie.from("nexushr_refresh", token)
             .httpOnly(true)
             .secure(secureCookie)
-            .sameSite("Strict")
+            .sameSite(secureCookie ? "None" : "Strict")
             .path("/api/auth")
             .maxAge(Duration.ofDays(refreshDays))
             .build();
@@ -100,7 +100,7 @@ public class AuthController {
         ResponseCookie.from("nexushr_refresh", "")
             .httpOnly(true)
             .secure(secureCookie)
-            .sameSite("Strict")
+            .sameSite(secureCookie ? "None" : "Strict")
             .path("/api/auth")
             .maxAge(Duration.ZERO)
             .build();

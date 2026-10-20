@@ -9,6 +9,7 @@ import { PerformanceWorkspace } from "./PerformanceWorkspace";
 import { DashboardWorkspace } from "./DashboardWorkspace";
 import { NotificationWorkspace } from "./NotificationWorkspace";
 import { IntelligenceWorkspace } from "./IntelligenceWorkspace";
+import { ProjectWorkspace } from "./ProjectWorkspace";
 
 export function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -69,6 +70,7 @@ export function App() {
         <PayrollWorkspace user={user} />
         <PerformanceWorkspace user={user} />
         <EmployeeWorkspace user={user} />
+        <ProjectWorkspace user={user} />
       </main>
     );
 

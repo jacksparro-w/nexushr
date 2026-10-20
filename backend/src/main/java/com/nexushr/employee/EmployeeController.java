@@ -10,6 +10,7 @@ import com.nexushr.performance.PerformanceReviewRepository;
 import com.nexushr.department.Department;
 import com.nexushr.department.DepartmentRepository;
 import com.nexushr.auth.UserRepository;
+import com.nexushr.auth.Role;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -105,6 +106,18 @@ public class EmployeeController {
         .orElseThrow(() -> notFound("Employee profile not found")));
   }
 
+  @GetMapping("/managers")
+  @PreAuthorize("hasAnyRole('ADMIN','HR')")
+  @Transactional(readOnly = true)
+  public java.util.List<EmployeeDtos.ManagerOption> managers() {
+    return employees.findAllByStatusOrderByLastNameAscFirstNameAsc(EmploymentStatus.ACTIVE).stream()
+        .filter(employee -> users.findByEmailIgnoreCase(employee.getWorkEmail())
+            .map(account -> account.isEnabled() && account.getRoles().contains(Role.MANAGER))
+            .orElse(false))
+        .map(EmployeeDtos.ManagerOption::from)
+        .toList();
+  }
+
   @GetMapping("/{id}")
   @Transactional(readOnly = true)
   public EmployeeDtos.Response get(@PathVariable UUID id, Authentication authentication) {
@@ -116,6 +129,7 @@ public class EmployeeController {
   @PostMapping
   @PreAuthorize("hasAnyRole('ADMIN','HR')")
   @ResponseStatus(HttpStatus.CREATED)
+  @Transactional
   public EmployeeDtos.Response create(@Valid @RequestBody EmployeeDtos.SaveRequest request) {
     if (employees.existsByEmployeeCodeIgnoreCase(request.employeeCode())) conflict("Employee code already exists");
     if (employees.existsByWorkEmailIgnoreCase(request.workEmail())) conflict("Work email already exists");
@@ -127,6 +141,7 @@ public class EmployeeController {
 
   @PutMapping("/{id}")
   @PreAuthorize("hasAnyRole('ADMIN','HR')")
+  @Transactional
   public EmployeeDtos.Response update(@PathVariable UUID id, @Valid @RequestBody EmployeeDtos.SaveRequest request) {
     Employee employee = find(id);
     if (!employee.getEmployeeCode().equalsIgnoreCase(request.employeeCode()) && employees.existsByEmployeeCodeIgnoreCase(request.employeeCode())) conflict("Employee code already exists");
@@ -144,6 +159,7 @@ public class EmployeeController {
   public void delete(@PathVariable UUID id) {
     Employee employee = find(id);
     if (employees.existsByManagerId(id)) conflict("Employee has direct reports and cannot be deleted");
+    if (departments.existsByManagerId(id)) conflict("Employee manages a department; reassign the department manager or deactivate the employee instead");
     if (attendance.existsByEmployeeId(id)) conflict("Employee attendance history prevents deletion; deactivate the employee instead");
     if (leaveRequests.existsByEmployeeId(id) || leaveBalances.existsByEmployeeId(id)) conflict("Employee leave history or balance prevents deletion; deactivate the employee instead");
     if (payrollStructures.existsByEmployeeId(id) || payslips.existsByEmployeeId(id)) conflict("Payroll structures or payslip history prevents deletion; deactivate the employee instead");
@@ -182,6 +198,10 @@ public class EmployeeController {
     if (id == null) return null;
     Employee manager = find(id);
     if (manager.getStatus() != EmploymentStatus.ACTIVE) throw new ResponseStatusException(HttpStatus.CONFLICT, "Manager must be active");
+    boolean hasManagerAccount = users.findByEmailIgnoreCase(manager.getWorkEmail())
+        .map(account -> account.isEnabled() && account.getRoles().contains(Role.MANAGER))
+        .orElse(false);
+    if (!hasManagerAccount) throw new ResponseStatusException(HttpStatus.CONFLICT, "Assign an enabled MANAGER login to this employee before selecting them as a manager");
     return manager;
   }
   private boolean canView(Employee employee, Authentication auth) {

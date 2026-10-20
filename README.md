@@ -38,6 +38,9 @@ See [docs/api-specification.md](docs/api-specification.md) for request/response 
 - Departments and employee profiles are managed by ADMIN/HR roles, with unique department codes, employee IDs, and work emails.
 - The directory supports case-insensitive name/email/ID search, department/status filters, and pagination. Managers see direct reports; employees see their own profile.
 - Profiles include department, designation, manager, employment status, hire date, and onboarding status.
+- HR/Admin can assign an employee's direct manager from active profiles with an enabled login account carrying the MANAGER role. Create that account first with the employee's work email, then assign the profile in the Add/Edit employee form.
+- HR/Admin can assign a department manager from the same eligible manager list.
+- Projects can be created by HR/Admin and assigned to a department and an eligible project manager. Project-level employee membership is not modeled yet.
 - Document records contain metadata only; binary upload and storage are not included.
 - Employee login accounts are created separately through the authentication account endpoint. Match the account email to the employee profile's work email to enable self-service profile access.
 

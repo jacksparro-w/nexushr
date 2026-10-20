@@ -45,20 +45,29 @@ All endpoints below require a bearer access token unless noted. `ADMIN` and `HR`
 ### Departments
 
 - `GET /api/departments` lists active departments. `?includeInactive=true` includes inactive departments.
-- `POST /api/departments` creates a department (ADMIN/HR): `{"code":"ENG","name":"Engineering","description":"Product engineering","active":true}`.
-- `PUT /api/departments/{id}` updates the name, description, and active state. The department code is immutable after creation.
+- `POST /api/departments` creates a department (ADMIN/HR): `{"code":"ENG","name":"Engineering","description":"Product engineering","active":true,"managerId":null}`. `managerId` is optional.
+- `PUT /api/departments/{id}` updates the name, description, active state, and optional `managerId`. The department code is immutable after creation.
 - `DELETE /api/departments/{id}` deletes an unused department. Departments with employees must be deactivated instead.
 
 ### Employees
 
 - `GET /api/employees/me` returns the employee profile associated with the signed-in email.
+- `GET /api/employees/managers` (ADMIN/HR) lists active employee profiles whose matching login is enabled and has the `MANAGER` role.
 - `GET /api/employees` returns a paginated Spring `Page` (`content`, `totalElements`, `totalPages`, `number`, `size`). Supports `q`, `departmentId`, `status`, `page` (default 0), and `size` (default 20, max 100). HR/admin receive the filtered directory; managers receive direct reports only; employees receive 403.
 - `GET /api/employees/{id}` returns a profile to HR/admin, the employee themself, or their direct manager.
 - `POST /api/employees` creates a profile (ADMIN/HR). Required fields: `employeeCode`, `firstName`, `lastName`, `workEmail`, `designation`, `departmentId`, and `hireDate` (`YYYY-MM-DD`). Optional fields: `phone`, `managerId`, `status` (`ACTIVE`, `INACTIVE`, `TERMINATED`), and `onboardingStatus` (`NOT_STARTED`, `IN_PROGRESS`, `COMPLETE`).
 - `PUT /api/employees/{id}` updates those profile fields (ADMIN/HR).
 - `DELETE /api/employees/{id}` deletes a profile (ADMIN/HR); employees who have direct reports or attendance history cannot be deleted and should be deactivated instead.
 
-Employee codes and work emails are unique. Duplicate values return 409, malformed/missing required fields return 400, and unknown department or manager IDs return 404. Departments must be active when assigned. Employee profile records are separate from login accounts; create the matching authentication account through `/api/auth/accounts` when the employee needs to sign in.
+Employee codes and work emails are unique. Duplicate values return 409, malformed/missing required fields return 400, and unknown department or manager IDs return 404. Departments must be active when assigned. A selected manager must be an active employee with an enabled login account that has the `MANAGER` role. Create the account with the same email as the profile before selecting them as a manager. Department manager assignment has the same requirement.
+
+### Projects
+
+- `GET /api/projects` lists projects for signed-in users.
+- `POST /api/projects` creates a project (ADMIN/HR) with `code`, `name`, `departmentId`, and optional `managerId`, `description`, and `active`.
+- `PUT /api/projects/{id}` updates its name, description, department, manager, and active state. The project code is immutable.
+
+Project departments must be active. A project manager must be an active employee with an enabled matching login carrying the `MANAGER` role. Project-level employee membership is not currently modeled.
 
 ### Employee document metadata
 

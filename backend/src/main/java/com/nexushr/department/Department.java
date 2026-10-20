@@ -6,6 +6,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
+import com.nexushr.employee.Employee;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -25,6 +29,10 @@ public class Department {
   @Column(length = 500)
   private String description;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "manager_id")
+  private Employee manager;
+
   @Column(nullable = false)
   private boolean active = true;
 
@@ -36,17 +44,19 @@ public class Department {
 
   protected Department() {}
 
-  public Department(String code, String name, String description, boolean active) {
+  public Department(String code, String name, String description, boolean active, Employee manager) {
     this.code = code.trim().toUpperCase();
     this.name = name.trim();
     this.description = description;
     this.active = active;
+    this.manager = manager;
   }
 
-  public void update(String name, String description, boolean active) {
+  public void update(String name, String description, boolean active, Employee manager) {
     this.name = name.trim();
     this.description = description;
     this.active = active;
+    this.manager = manager;
     this.updatedAt = Instant.now();
   }
 
@@ -55,4 +65,5 @@ public class Department {
   public String getName() { return name; }
   public String getDescription() { return description; }
   public boolean isActive() { return active; }
+  public Employee getManager() { return manager; }
 }

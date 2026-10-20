@@ -14,7 +14,11 @@ export type Department = {
   name: string;
   description: string | null;
   active: boolean;
+  managerId: string | null;
+  managerName: string | null;
 };
+export type ManagerOption = { id: string; employeeCode: string; firstName: string; lastName: string; workEmail: string; departmentId: string; departmentName: string };
+export type Project = { id: string; code: string; name: string; description: string | null; departmentId: string; departmentName: string; managerId: string | null; managerName: string | null; active: boolean };
 export type Employee = {
   id: string;
   employeeCode: string;

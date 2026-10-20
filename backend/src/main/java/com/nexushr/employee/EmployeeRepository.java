@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSpecificationExecutor<Employee> {
   java.util.Optional<Employee> findByWorkEmailIgnoreCase(String email);
+  java.util.List<Employee> findAllByStatusOrderByLastNameAscFirstNameAsc(EmploymentStatus status);
   Page<Employee> findByManagerWorkEmailIgnoreCase(String email, Pageable pageable);
   boolean existsByManagerId(UUID id);
   boolean existsByDepartmentId(UUID id);

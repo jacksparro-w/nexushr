@@ -38,6 +38,15 @@ public final class EmployeeDtos {
     }
   }
 
+  public record ManagerOption(UUID id, String employeeCode, String firstName, String lastName,
+      String workEmail, UUID departmentId, String departmentName) {
+    public static ManagerOption from(Employee employee) {
+      return new ManagerOption(employee.getId(), employee.getEmployeeCode(), employee.getFirstName(),
+          employee.getLastName(), employee.getWorkEmail(), employee.getDepartment().getId(),
+          employee.getDepartment().getName());
+    }
+  }
+
   public record DocumentRequest(@NotBlank @Size(max = 40) String documentType,
       @NotBlank @Size(max = 255) String fileName,
       @NotBlank @Size(max = 120) String contentType,

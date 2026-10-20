@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { authApi, peopleApi } from "../api";
-import type { Department, Employee, EmployeeDocument, EmployeePage, Role, User } from "../types";
+import type { Department, Employee, EmployeeDocument, EmployeePage, ManagerOption, Role, User } from "../types";
 
 type Props = { user: User };
 
@@ -86,7 +86,7 @@ function EmployeeLoginSetup({ employee }: { employee: Employee }) {
   </details>;
 }
 
-function AccountManagement({ user }: { user: User }) {
+function AccountManagement({ user, onAccountCreated }: { user: User; onAccountCreated: () => void }) {
   const availableRoles: Role[] = user.roles.includes("ADMIN")
     ? ["EMPLOYEE", "MANAGER", "HR"]
     : ["EMPLOYEE", "MANAGER"];
@@ -112,6 +112,7 @@ function AccountManagement({ user }: { user: User }) {
       (event.target as HTMLFormElement).reset();
       setRoles(["EMPLOYEE"]);
       setMessage(`Login account created for ${account.email}. Share the initial password with that person securely.`);
+      onAccountCreated();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not create login account");
     } finally {
@@ -137,6 +138,7 @@ export function EmployeeWorkspace({ user }: Props) {
   const canManage = user.roles.some((role) => role === "ADMIN" || role === "HR");
   const isManager = user.roles.includes("MANAGER");
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [managers, setManagers] = useState<ManagerOption[]>([]);
   const [employees, setEmployees] = useState<EmployeePage | null>(null);
   const [profile, setProfile] = useState<Employee | null>(null);
   const [editing, setEditing] = useState<Employee | null>(null);
@@ -166,6 +168,7 @@ export function EmployeeWorkspace({ user }: Props) {
   useEffect(() => {
     if (canManage || isManager) {
       peopleApi.departments().then(setDepartments).catch(() => undefined);
+      if (canManage) peopleApi.managers().then(setManagers).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Could not load manager accounts"));
       void loadDirectory(0, "");
     } else {
       peopleApi.me().then(setProfile).catch((cause: unknown) =>
@@ -199,6 +202,7 @@ export function EmployeeWorkspace({ user }: Props) {
       (event.target as HTMLFormElement).reset();
       setEditing(null);
       setNotice(editing ? "Employee profile updated." : "Employee profile created.");
+      void peopleApi.managers().then(setManagers).catch(() => undefined);
       await loadDirectory(0);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not create employee");
@@ -227,12 +231,31 @@ export function EmployeeWorkspace({ user }: Props) {
         code: String(form.get("code")),
         name: String(form.get("name")),
         description: String(form.get("description")),
+        managerId: String(form.get("managerId")) || null,
       });
       setDepartments((current) => [...current, department].sort((a, b) => a.name.localeCompare(b.name)));
       (event.target as HTMLFormElement).reset();
       setNotice("Department created.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not create department");
+    }
+  }
+
+  async function assignDepartmentManager(department: Department, managerId: string) {
+    setError("");
+    setNotice("");
+    try {
+      const updated = await peopleApi.updateDepartment(department.id, {
+        code: department.code,
+        name: department.name,
+        description: department.description,
+        active: department.active,
+        managerId: managerId || null,
+      });
+      setDepartments((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setNotice(`Department manager updated for ${updated.name}.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not assign department manager");
     }
   }
 
@@ -251,12 +274,12 @@ export function EmployeeWorkspace({ user }: Props) {
       <form className="search-form" onSubmit={(event) => { event.preventDefault(); void loadDirectory(0); }}><label className="sr-only" htmlFor="employee-search">Search employees</label><input id="employee-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, email, or ID"/><label className="sr-only" htmlFor="department-filter">Department</label><select id="department-filter" value={departmentFilter} onChange={(event) => { setDepartmentFilter(event.target.value); }}><option value="">All departments</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select><label className="sr-only" htmlFor="status-filter">Employment status</label><select id="status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="TERMINATED">Terminated</option></select><button className="quiet">Search</button></form>
     </div>
     {error && <p className="error" role="alert">{error}</p>}{notice && <p className="notice" role="status">{notice}</p>}
-    {canManage && <AccountManagement user={user}/>}
+    {canManage && <AccountManagement user={user} onAccountCreated={() => { void peopleApi.managers().then(setManagers).catch(() => undefined); }} />}
     {canManage && <details className="management-card" open={Boolean(editing)}><summary>{editing ? `Edit ${editing.firstName} ${editing.lastName}` : "Add employee"}</summary><form className="people-form" key={editing?.id ?? "new"} onSubmit={createEmployee}>
-      <label>Employee ID<input name="employeeCode" required maxLength={30} defaultValue={editing?.employeeCode}/></label><label>First name<input name="firstName" required defaultValue={editing?.firstName}/></label><label>Last name<input name="lastName" required defaultValue={editing?.lastName}/></label><label>Work email<input name="workEmail" type="email" required defaultValue={editing?.workEmail}/></label><label>Phone<input name="phone" defaultValue={editing?.phone ?? ""}/></label><label>Designation<input name="designation" required defaultValue={editing?.designation}/></label><label>Department<select name="departmentId" required defaultValue={editing?.departmentId ?? ""}><option value="" disabled>Select department</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label><label>Manager<select name="managerId" defaultValue={editing?.managerId ?? ""}><option value="">No manager</option>{editing?.managerId && !employees?.content.some((employee) => employee.id === editing.managerId) && <option value={editing.managerId}>{editing.managerName ?? "Current manager"}</option>}{employees?.content.filter((employee) => employee.id !== editing?.id).map((employee) => <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName}</option>)}</select></label><label>Status<select name="status" defaultValue={editing?.status ?? "ACTIVE"}><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="TERMINATED">Terminated</option></select></label><label>Onboarding<select name="onboardingStatus" defaultValue={editing?.onboardingStatus ?? "NOT_STARTED"}><option value="NOT_STARTED">Not started</option><option value="IN_PROGRESS">In progress</option><option value="COMPLETE">Complete</option></select></label><label>Hire date<input name="hireDate" type="date" required defaultValue={editing?.hireDate}/></label>
+      <label>Employee ID<input name="employeeCode" required maxLength={30} defaultValue={editing?.employeeCode}/></label><label>First name<input name="firstName" required defaultValue={editing?.firstName}/></label><label>Last name<input name="lastName" required defaultValue={editing?.lastName}/></label><label>Work email<input name="workEmail" type="email" required defaultValue={editing?.workEmail}/></label><label>Phone<input name="phone" defaultValue={editing?.phone ?? ""}/></label><label>Designation<input name="designation" required defaultValue={editing?.designation}/></label><label>Department<select name="departmentId" required defaultValue={editing?.departmentId ?? ""}><option value="" disabled>Select department</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label><label>Manager<select name="managerId" defaultValue={editing?.managerId ?? ""}><option value="">No manager</option>{editing?.managerId && !managers.some((manager) => manager.id === editing.managerId) && <option value={editing.managerId}>{editing.managerName ?? "Current manager"}</option>}{managers.filter((manager) => manager.id !== editing?.id).map((manager) => <option key={manager.id} value={manager.id}>{manager.firstName} {manager.lastName} · {manager.departmentName}</option>)}</select></label><label>Status<select name="status" defaultValue={editing?.status ?? "ACTIVE"}><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="TERMINATED">Terminated</option></select></label><label>Onboarding<select name="onboardingStatus" defaultValue={editing?.onboardingStatus ?? "NOT_STARTED"}><option value="NOT_STARTED">Not started</option><option value="IN_PROGRESS">In progress</option><option value="COMPLETE">Complete</option></select></label><label>Hire date<input name="hireDate" type="date" required defaultValue={editing?.hireDate}/></label>
       <button className="submit" disabled={busy}>{busy ? "Saving…" : editing ? "Save changes" : "Create profile"}</button>{editing && <button type="button" className="quiet" onClick={() => setEditing(null)}>Cancel edit</button>}
     </form></details>}
-    {canManage && <details className="management-card"><summary>Add department</summary><form className="people-form" onSubmit={createDepartment}><label>Department code<input name="code" required maxLength={30}/></label><label>Name<input name="name" required/></label><label>Description<input name="description"/></label><button className="quiet">Create department</button></form></details>}
+    {canManage && <details className="management-card"><summary>Departments and department managers</summary><form className="people-form" onSubmit={createDepartment}><label>Department code<input name="code" required maxLength={30}/></label><label>Name<input name="name" required/></label><label>Description<input name="description"/></label><label>Department manager<select name="managerId" defaultValue=""><option value="">No manager</option>{managers.map((manager) => <option key={manager.id} value={manager.id}>{manager.firstName} {manager.lastName} · {manager.departmentName}</option>)}</select></label><button className="quiet">Create department</button></form>{departments.map((department) => <label key={department.id}>{department.name} manager<select value={department.managerId ?? ""} onChange={(event) => void assignDepartmentManager(department, event.target.value)}><option value="">No manager</option>{managers.map((manager) => <option key={manager.id} value={manager.id}>{manager.firstName} {manager.lastName} · {manager.departmentName}</option>)}</select></label>)}</details>}
     <div className="employee-table-wrap"><table><thead><tr><th>Employee</th><th>Department</th><th>Designation</th><th>Manager</th><th>Status</th><th>Onboarding</th>{canManage && <th>Actions</th>}</tr></thead><tbody>
       {employees?.content.map((employee) => <tr key={employee.id}><td><strong>{employee.firstName} {employee.lastName}</strong><span>{employee.employeeCode} · {employee.workEmail}</span><EmployeeDocuments employee={employee} canManage={canManage}/>{canManage && <EmployeeLoginSetup employee={employee}/>}</td><td>{employee.departmentName}</td><td>{employee.designation}</td><td>{employee.managerName ?? "—"}</td><td><span className={`pill ${employee.status.toLowerCase()}`}>{employee.status.replace("_", " ")}</span></td><td>{employee.onboardingStatus.replaceAll("_", " ")}</td>{canManage && <td><button className="text-button" onClick={() => setEditing(employee)}>Edit</button><button className="text-button" onClick={() => void deleteEmployee(employee)}>Delete</button></td>}</tr>)}
       {!employees?.content.length && <tr><td colSpan={canManage ? 7 : 6} className="empty-state">No employee profiles found.</td></tr>}

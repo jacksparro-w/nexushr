@@ -8,4 +8,5 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
   List<Department> findAllByOrderByNameAsc();
   boolean existsByCodeIgnoreCase(String code);
   boolean existsByNameIgnoreCase(String name);
+  boolean existsByManagerId(UUID managerId);
 }
