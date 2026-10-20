@@ -1,0 +1,33 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - nexushr-prometheus:/prometheus
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.6.1
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?Set GRAFANA_ADMIN_USER in the root .env file}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in the root .env file}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - nexushr-grafana:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana-datasource.yml:/etc/grafana/provisioning/datasources/nexushr.yml:ro
+      - ./infrastructure/monitoring/grafana-dashboard-provider.yml:/etc/grafana/provisioning/dashboards/nexushr.yml:ro
+      - ./infrastructure/monitoring/nexushr-dashboard.json:/var/lib/grafana/dashboards/nexushr.json:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  nexushr-prometheus:
+  nexushr-grafana:

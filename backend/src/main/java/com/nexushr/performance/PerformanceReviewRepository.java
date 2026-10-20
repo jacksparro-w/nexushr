@@ -1,0 +1,3 @@
+package com.nexushr.performance;
+import java.util.List; import java.util.Optional; import java.util.UUID; import org.springframework.data.jpa.repository.JpaRepository;
+public interface PerformanceReviewRepository extends JpaRepository<PerformanceReview,UUID>{List<PerformanceReview> findByEmployeeIdOrderByCreatedAtDesc(UUID employeeId);Optional<PerformanceReview> findByCycleIdAndEmployeeId(UUID cycleId,UUID employeeId);List<PerformanceReview> findByEmployeeManagerIdOrderByCreatedAtDesc(UUID managerId);List<PerformanceReview> findAllByOrderByCreatedAtDesc();long countByCycleId(UUID cycleId);boolean existsByEmployeeIdOrManagerId(UUID employeeId,UUID managerId);}

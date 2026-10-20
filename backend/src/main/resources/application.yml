@@ -1,0 +1,66 @@
+spring:
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  mail:
+    test-connection: false
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: ${AI_MODEL:gpt-4o-mini}
+          temperature: 0.2
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+server:
+  port: ${SERVER_PORT:8090}
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8091}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+app:
+  ai:
+    enabled: ${AI_ENABLED:false}
+  notifications:
+    email:
+      enabled: ${EMAIL_NOTIFICATIONS_ENABLED:false}
+      host: ${MAIL_HOST:}
+      port: ${MAIL_PORT:587}
+      username: ${MAIL_USERNAME:}
+      password: ${MAIL_PASSWORD:}
+      from: ${MAIL_FROM:noreply@nexushr.local}
+      poll-interval-ms: ${MAIL_POLL_INTERVAL_MS:30000}
+  frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  security:
+    jwt-secret: ${JWT_SECRET}
+    access-token-minutes: ${ACCESS_TOKEN_MINUTES:15}
+    refresh-token-days: ${REFRESH_TOKEN_DAYS:14}
+    cookie-secure: ${COOKIE_SECURE:false}
+  bootstrap:
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  attendance:
+    time-zone: ${ATTENDANCE_TIME_ZONE:Asia/Kolkata}
+    workday-start: ${ATTENDANCE_WORKDAY_START:09:00}
+    grace-minutes: ${ATTENDANCE_GRACE_MINUTES:0}

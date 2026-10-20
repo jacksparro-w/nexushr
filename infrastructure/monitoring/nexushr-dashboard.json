@@ -1,0 +1,13 @@
+{
+  "title": "NexusHR service health",
+  "uid": "nexushr-service-health",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    { "id": 1, "title": "HTTP requests per second", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }, "targets": [{ "expr": "sum(rate(http_server_requests_seconds_count[5m])) by (uri, method)", "legendFormat": "{{method}} {{uri}}", "refId": "A" }] },
+    { "id": 2, "title": "HTTP 5xx responses per second", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }, "targets": [{ "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) by (uri)", "legendFormat": "{{uri}}", "refId": "A" }] },
+    { "id": 3, "title": "JVM memory used", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }, "targets": [{ "expr": "sum(jvm_memory_used_bytes) by (area)", "legendFormat": "{{area}}", "refId": "A" }] },
+    { "id": 4, "title": "JVM live threads", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }, "targets": [{ "expr": "jvm_threads_live_threads", "legendFormat": "Live threads", "refId": "A" }] }
+  ]
+}
